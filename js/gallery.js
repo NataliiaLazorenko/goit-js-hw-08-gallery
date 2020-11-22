@@ -8,11 +8,14 @@ const refs = {
   largeImage: document.querySelector('img.lightbox__image'),
 };
 
-// Створення і рендер розмітки по масиву даних
 let index = 0;
 let activeIndex; // індекс поточного елемента
 
-const createGalleryItem = image => {
+// Створення розмітки
+const galleryItems = galleryImages.map(image => createGalleryItem(image));
+refs.gallery.append(...galleryItems);
+
+function createGalleryItem(image) {
   const galleryItem = document.createElement('li');
   galleryItem.classList.add('gallery__item');
 
@@ -31,51 +34,71 @@ const createGalleryItem = image => {
   galleryLink.append(galleryImage);
 
   return galleryItem;
-};
+}
 
-const galleryItems = galleryImages.map(image => createGalleryItem(image));
-refs.gallery.append(...galleryItems);
+refs.gallery.addEventListener('click', onGalleryClick);
+refs.lightboxBtn.addEventListener('click', onModalClose); // Закривання модального вікна при натисканні на кнопку
+refs.lightboxOverley.addEventListener('click', onModalClose); // Закривання модального вікна при натисканні на оверлей
 
-// Реалізація делегування на галереї ul.js-gallery і отримання url великого зображення
-refs.gallery.addEventListener('click', event => {
+function onGalleryClick(event) {
   event.preventDefault();
 
   if (event.target.nodeName !== 'IMG') {
     return;
   }
 
-  openLightbox();
-
-  const largeImageUrl = event.target.dataset.source;
-  setLargeImageSrc(largeImageUrl);
+  openModal();
 
   activeIndex = event.target.dataset.index;
-});
+  const largeImageUrl = event.target.dataset.source;
+  setLargeImageSrc(largeImageUrl);
+}
 
-// Відкриття модального вікна
-const openLightbox = () => {
+// Відкривання модального вікна
+function openModal() {
+  window.addEventListener('keydown', onKeyPress);
   refs.lightbox.classList.add('is-open');
-};
+}
+
+function onKeyPress(event) {
+  // Закривання модального вікна клавішею Escape
+  if (event.code === 'Escape') {
+    onModalClose();
+  } else if (event.code === 'ArrowRight') {
+    switchNextImage();
+  } else if (event.code === 'ArrowLeft') {
+    switchPreviousImage();
+  }
+}
 
 // Підміна значення атрибута src елемента img.lightbox__image
-const setLargeImageSrc = url => {
+function setLargeImageSrc(url) {
   refs.largeImage.src = url;
-};
+}
+
+// Перегортування зображень вперед
+function switchNextImage() {
+  if (activeIndex === galleryImages.length - 1) {
+    return;
+  }
+
+  activeIndex = Number(activeIndex) + 1;
+  refs.largeImage.src = galleryImages[activeIndex].original;
+}
+
+// Перегортування зображень назад
+function switchPreviousImage() {
+  if (activeIndex === 0) {
+    return;
+  }
+
+  activeIndex = Number(activeIndex) - 1;
+  refs.largeImage.src = galleryImages[activeIndex].original;
+}
 
 // Закривання модального вікна
-const closeLightbox = () => {
+function onModalClose() {
+  window.removeEventListener('keydown', onKeyPress);
   refs.lightbox.classList.remove('is-open');
-
-  // Очищення значення атрибута src елемента img.lightbox__image.
-  // Щоб при наступному відкритті модального вікна, поки вантажиться зображення, не бачили попереднє
-  refs.largeImage.src = '';
-};
-
-// Закривання модального вікна при натисканні на кнопку button[data-action="close-modal"]
-refs.lightboxBtn.addEventListener('click', closeLightbox);
-
-// Закривання модального вікна при натисканні на div.lightbox__overlay
-refs.lightboxOverley.addEventListener('click', closeLightbox);
-
-// Закриття модального вікна після натискання клавіші ESC
-// Перегортування зображень галереї у відкритому модальному вікні клавішами "вліво" і "вправо"
+  refs.largeImage.src = ''; // Очищення атрибута src, щоб при наступному відкритті модального вікна не бачили попереднє зображення
+}
